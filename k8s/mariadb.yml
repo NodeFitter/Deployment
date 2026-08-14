@@ -18,13 +18,16 @@ apiVersion: v1
 kind: Service
 metadata:
   name: mariadb
+  namespace: backend
+  labels:
+    type: backend
 spec:
   selector:
-    app: mariadb
+    type: backend # Service will have all pod with label "type" set to "backend"
   ports:
     - port: 3306
       targetPort: 3306
-  type: LoadBalancer
+  type: ClusterIP
 ---
 # MariaDB StatefulSet
 apiVersion: apps/v1
@@ -97,3 +100,94 @@ spec:
         resources:
           requests:
             storage: 1Gi
+---
+# TODO: adjust to recover MariaDB metrics
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: backend
+  namespace: backend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: backend
+  minReplicas: 2
+  maxReplicas: 20
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+  metrics:
+    - type: Pods
+      pods:
+        metric:
+          name: http_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: "50"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "backend-network-policy"
+  namespace: backend # Apply the network policy on namespace backend
+spec:
+  podSelector:
+    matchLabels:
+      type: backend # Apply the network policy to pods having label type=backend (and, because of namespace metadata, in namespace backend)
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from: # Limit communication from only pods that are in namespace frontend and that also have label type=frontend and only if they are to port 80
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: frontend
+        podSelector:
+          matchLabels:
+            type: frontend
+      ports:
+        - port: 3306
+    - from: # Allow also traffic for monitoring
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 9090 # TODO: adjust network policy to allow prometheus metrics retrieval
+    - from: # Allow connection from other pods in backend namespace with label type=backend
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: backend
+        podSelector:
+          matchLabels:
+            type: backend # TODO: remove backend<->backend rule if not necessary
+  egress:
+    - to: # Allow connection to other pods in backend namespace with label type=backend
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: backend
+        podSelector:
+          matchLabels:
+            type: backend # TODO: remove backend<->backend rule if not necessary
+    - to: # Allow DNS
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: kube-system
+        podSelector:
+          matchLabels:
+            k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
