@@ -1,0 +1,20 @@
+# TODO: add metrics for MariaDB
+
+prometheus:
+  url: http://prometheus-operated.monitoring.svc
+  port: 9090
+rules:
+  default: false
+  custom:
+    - seriesQuery: 'total_request_qt_total{namespace!="",pod!=""}'
+      resources:
+        overrides:
+          namespace:
+            resource: namespace
+          pod:
+            resource: pod
+      name:
+        matches: "^total_request_qt_total$"
+        as: "http_requests_per_second"
+      metricsQuery: |
+        rate(total_request_qt_total{<<.LabelMatchers>>}[1m])
