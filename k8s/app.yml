@@ -1,20 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: app
+  name: frontend-app-deployment
+  namespace: frontend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: app
+      type: frontend # This deployment manages pods that have label type=frontend
   template:
     metadata:
       labels:
-        app: app
+        type: frontend
     spec:
+      nodeSelector: # Schedule only on nodes that have label frontend
+        type: frontend
       containers:
-        - name: app
-          image: ghcr.io/nodefitter/sampleapp:0.1.0
+        - name: test-app
+          image: ghcr.io/nodefitter/sampleapp:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
@@ -28,11 +31,111 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: app
+  name: frontend-app-service
+  namespace: frontend
+  labels:
+    type: frontend
 spec:
   selector:
-    app: app
+    type: frontend # Service will have all pod with label "type" set to "frontend"
   ports:
     - port: 8080
       targetPort: 8080
   type: LoadBalancer
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-servicemonitor-frontend
+  namespace: monitoring
+  labels:
+    monitoring: prometheus
+spec:
+  namespaceSelector:
+    matchNames:
+      - frontend
+  selector:
+    matchLabels:
+      type: frontend
+  endpoints:
+    - port: metrics #should match metrics point name
+      path: /metrics
+      interval: 15s
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-frontend
+  namespace: frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend-app-deployment # Must match with deploy name
+  minReplicas: 1
+  maxReplicas: 10
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0 # Delay before apply change
+      policies:
+        - type: Percent
+          value: 100 # Can scale until 100% of what already present in 60 seconds
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+  metrics:
+    - type: Pods
+      pods:
+        metric:
+          name: http_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: "5"
+  ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "frontend-network-policy"
+  namespace: frontend # Apply the network policy on namespace frontend
+spec:
+  podSelector:
+    matchLabels:
+      type: frontend # Apply the network policy to pods having label type=frontend (and, because of namespace metadata, in namespace frontend)
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+      - port: 8080
+    - from: # Allow also traffic for monitoring
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 8080
+  egress:
+    - to: # Allow communication only to pods in backend namespace with label type=backend
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: backend
+        podSelector:
+            matchLabels:
+              type: backend
+      ports:
+        - port: 3306
+    - to: # Allow DNS
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: kube-system
+        podSelector:
+          matchLabels:
+            k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
