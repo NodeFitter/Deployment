@@ -1,0 +1,30 @@
+services:
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_DATABASE: test
+      MARIADB_USER: test
+      MARIADB_PASSWORD: testpassword
+      MARIADB_ROOT_PASSWORD: rootpassword
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    environment:
+      DB_DSN: "test:testpassword@tcp(mariadb:3306)/test"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+volumes:
+  mariadb-data:
