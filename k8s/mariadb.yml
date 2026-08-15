@@ -93,26 +93,24 @@ spec:
             periodSeconds: 5
             failureThreshold: 10
         - name: mysql-metrics
-          image: prom/mysqld-exporter:latest
+          image: prom/mysqld-exporter:0.20.0
           ports:
             - containerPort: 9104
-          env:
-             - name: MYSQL_USER
-               valueFrom:
-                 secretKeyRef:
-                   name: mariadb-secret
-                   key: MARIADB_USER
-             - name: MYSQL_PASSWORD
-               valueFrom:
-                secretKeyRef:
-                  name: mariadb-secret
-                  key: MARIADB_PASSWORD
-             - name: DATA_SOURCE_NAME
-               value: "$(MYSQL_USER):$(MYSQL_PASSWORD)@(localhost:3306)/" # Take the metrics from the db present in the same pod
+          volumeMounts:
+            - name: mysql-exporter-config
+              mountPath: /.my.cnf
+              subPath: .my.cnf
+              readOnly: true
       volumes:
         - name: initdb
           configMap:
             name: mariadb-initdb
+        - name: mysql-exporter-config
+          secret:
+            secretName: mysql-exporter-secret
+            items:
+              - key: .my.cnf
+                path: .my.cnf
   volumeClaimTemplates:
     - metadata:
         name: data
