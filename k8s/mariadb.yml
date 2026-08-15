@@ -51,6 +51,8 @@ spec:
         type: backend
         app: mariadb
     spec:
+      nodeSelector: # Schedule only on nodes that have label frontend
+        type: backend
       containers:
         - name: mariadb
           image: mariadb:11
