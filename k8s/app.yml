@@ -20,7 +20,10 @@ spec:
           image: ghcr.io/nodefitter/sampleapp:latest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8080
+            - name: http
+              containerPort: 8080
+            - name: metrics
+              containerPort: 9090
           env:
             - name: DB_DSN
               valueFrom:
@@ -39,8 +42,12 @@ spec:
   selector:
     type: frontend # Service will have all pod with label "type" set to "frontend"
   ports:
-    - port: 8080
-      targetPort: 8080
+    - name: http
+      port: 8080
+      targetPort: http
+    - name: metrics
+      port: 9090
+      targetPort: metrics
   type: LoadBalancer
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -95,7 +102,7 @@ spec:
         target:
           type: AverageValue
           averageValue: "5"
-  ---
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -116,7 +123,7 @@ spec:
           matchLabels:
             kubernetes.io/metadata.name: monitoring
       ports:
-        - port: 8080
+        - port: 9090
   egress:
     - to: # Allow communication only to pods in backend namespace with label type=backend
       - namespaceSelector:

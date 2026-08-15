@@ -37,10 +37,18 @@ cleanup() {
     kubectl delete secret "$DB_SECRET_NAME" --ignore-not-found
     kubectl delete secret "$APP_SECRET_NAME" --ignore-not-found
 
+    echo "Deleting namespaces..."
+    kubectl delete namespace frontend
+    kubectl delete namespace backend
+
     echo "Cleanup complete."
 }
 
 trap cleanup EXIT
+
+echo "Creating namespaces..."
+kubectl create namespace frontend
+kubectl create namespace backend
 
 echo "Creating the config map..."
 kubectl create configmap "$INITDB_CONFIGMAP_NAME" \
