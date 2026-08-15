@@ -69,7 +69,7 @@ kubectl create secret generic "$DB_SECRET_NAME" \
     kubectl apply -f -
 
 kubectl create secret generic "$APP_SECRET_NAME" \
-    --namespace=backend \
+    --namespace=frontend \
     --from-env-file="$APP_SECRET_FILE" \
     --dry-run=client \
     -o yaml |
