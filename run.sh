@@ -67,13 +67,10 @@ kubectl create secret generic "$APP_SECRET_NAME" \
     -o yaml |
     kubectl apply -f -
 
-MARIADB_USER=$(grep '^MARIADB_USER=' "$DB_SECRET_FILE" | cut -d= -f2-)
-MARIADB_PASSWORD=$(grep '^MARIADB_PASSWORD=' "$DB_SECRET_FILE" | cut -d= -f2-)
-
 cat > /tmp/sql-exporter.cnf <<EOF
 [client]
-user=${MARIADB_USER}
-password=${MARIADB_PASSWORD}
+user=$(grep '^MARIADB_USER=' "$DB_SECRET_FILE" | cut -d= -f2-)
+password=$(grep '^MARIADB_PASSWORD=' "$DB_SECRET_FILE" | cut -d= -f2-)
 host=localhost
 port=3306
 EOF
