@@ -93,7 +93,9 @@ spec:
             periodSeconds: 5
             failureThreshold: 10
         - name: mysql-metrics
-          image: prom/mysqld-exporter:0.20.0
+          image: prom/mysqld-exporter:latest
+          args:
+            - "--config.my-cnf=/.my.cnf"
           ports:
             - containerPort: 9104
           volumeMounts:

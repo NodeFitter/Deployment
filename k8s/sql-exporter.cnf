@@ -1,5 +1,0 @@
-[client]
-user=${MARIADB_USER}
-password=${MARIADB_PASSWORD}
-host=localhost
-port=3306

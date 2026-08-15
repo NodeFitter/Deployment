@@ -36,6 +36,7 @@ cleanup() {
     echo "Deleting secrets..."
     kubectl delete secret "$DB_SECRET_NAME" --ignore-not-found -n backend
     kubectl delete secret "$APP_SECRET_NAME" --ignore-not-found -n backend
+    rm /tmp/sql-exporter.cnf
 
     echo "Cleanup complete."
 }
@@ -66,9 +67,20 @@ kubectl create secret generic "$APP_SECRET_NAME" \
     -o yaml |
     kubectl apply -f -
 
-kubectl create secret generic sql-exporter-secret \
+MARIADB_USER=$(grep '^MARIADB_USER=' "$DB_SECRET_FILE" | cut -d= -f2-)
+MARIADB_PASSWORD=$(grep '^MARIADB_PASSWORD=' "$DB_SECRET_FILE" | cut -d= -f2-)
+
+cat > /tmp/sql-exporter.cnf <<EOF
+[client]
+user=${MARIADB_USER}
+password=${MARIADB_PASSWORD}
+host=localhost
+port=3306
+EOF
+
+kubectl create secret generic mysql-exporter-secret \
     --namespace=backend \
-    --from-file=.my.cnf=/k8s/sql-exporter.cnf \
+    --from-file=.my.cnf=/tmp/sql-exporter.cnf \
     --dry-run=client \
     -o yaml |
     kubectl apply -f -
