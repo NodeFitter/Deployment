@@ -65,7 +65,7 @@ spec:
     matchLabels:
       type: frontend
   endpoints:
-    - port: metrics #should match metrics point name
+    - port: frontend
       path: /metrics
       interval: 15s
 ---
