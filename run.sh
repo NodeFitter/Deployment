@@ -85,7 +85,7 @@ EOF
 
 kubectl create secret generic mysql-exporter-secret \
     --namespace=backend \
-    --from-file=.my.cnf=/tmp/sql-exporter.cnf \
+    --from-file=.config.cnf=/tmp/sql-exporter.cnf \
     --dry-run=client \
     -o yaml |
     kubectl apply -f -

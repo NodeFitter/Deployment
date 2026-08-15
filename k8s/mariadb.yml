@@ -95,13 +95,13 @@ spec:
         - name: mysql-metrics
           image: prom/mysqld-exporter:latest
           args:
-            - "--config.my-cnf=/.my.cnf"
+            - "--config.my-cnf=/.config.cnf"
           ports:
             - containerPort: 9104
           volumeMounts:
             - name: mysql-exporter-config
-              mountPath: /.my.cnf
-              subPath: .my.cnf
+              mountPath: /.config.cnf
+              subPath: .config.cnf
               readOnly: true
       volumes:
         - name: initdb
@@ -111,8 +111,8 @@ spec:
           secret:
             secretName: mysql-exporter-secret
             items:
-              - key: .my.cnf
-                path: .my.cnf
+              - key: .config.cnf
+                path: .config.cnf
   volumeClaimTemplates:
     - metadata:
         name: data
