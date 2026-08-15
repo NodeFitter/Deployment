@@ -23,10 +23,14 @@ metadata:
     type: backend
 spec:
   selector:
-    type: backend # Service will have all pod with label "type" set to "backend"
+    type: backend
   ports:
-    - port: 3306
+    - name: mysql
+      port: 3306
       targetPort: 3306
+    - name: metrics
+      port: 9104
+      targetPort: 9104
   type: ClusterIP
 ---
 # MariaDB StatefulSet
@@ -34,6 +38,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: mariadb
+  namespace: backend
 spec:
   serviceName: mariadb
   replicas: 1
@@ -43,6 +48,7 @@ spec:
   template:
     metadata:
       labels:
+        type: backend
         app: mariadb
     spec:
       containers:
@@ -86,6 +92,23 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
             failureThreshold: 10
+        - name: mysql-metrics
+          image: prom/mysqld-exporter:latest
+          ports:
+            - containerPort: 9104
+          env:
+             - name: MYSQL_USER
+               valueFrom:
+                 secretKeyRef:
+                   name: mariadb-secret
+                   key: MARIADB_USER
+             - name: MYSQL_PASSWORD
+               valueFrom:
+                secretKeyRef:
+                  name: mariadb-secret
+                  key: MARIADB_PASSWORD
+             - name: DATA_SOURCE_NAME
+               value: "$(MYSQL_USER):$(MYSQL_PASSWORD)@(localhost:3306)/" # Take the metrics from the db present in the same pod
       volumes:
         - name: initdb
           configMap:
@@ -105,21 +128,21 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: backend
+  name: hpa-backend
   namespace: backend
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
-    kind: Deployment
-    name: backend
-  minReplicas: 2
-  maxReplicas: 20
+    kind: StatefulSet
+    name: mariadb # Must match with deploy name
+  minReplicas: 1
+  maxReplicas: 10
   behavior:
     scaleUp:
-      stabilizationWindowSeconds: 0
+      stabilizationWindowSeconds: 0 # Delay before apply change
       policies:
         - type: Percent
-          value: 100
+          value: 100 # Can scale until 100% of what already present in 60 seconds
           periodSeconds: 60
     scaleDown:
       stabilizationWindowSeconds: 300
@@ -131,10 +154,10 @@ spec:
     - type: Pods
       pods:
         metric:
-          name: http_requests_per_second
+          name: mysql_reads_per_second
         target:
           type: AverageValue
-          averageValue: "50"
+          averageValue: "5"
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -163,7 +186,7 @@ spec:
           matchLabels:
             kubernetes.io/metadata.name: monitoring
       ports:
-        - port: 9090 # TODO: adjust network policy to allow prometheus metrics retrieval
+        - port: 9104 # TODO: adjust network policy to allow prometheus metrics retrieval
     - from: # Allow connection from other pods in backend namespace with label type=backend
       - namespaceSelector:
           matchLabels:
@@ -191,3 +214,22 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-servicemonitor-backend
+  namespace: monitoring
+  labels:
+    monitoring: prometheus
+spec:
+  namespaceSelector:
+    matchNames:
+      - backend
+  selector:
+    matchLabels:
+      type: backend
+  endpoints:
+    - port: metrics #must match Service port name
+      path: /metrics
+      interval: 15s

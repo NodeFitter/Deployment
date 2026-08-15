@@ -18,3 +18,15 @@ rules:
         as: "http_requests_per_second"
       metricsQuery: |
         rate(total_request_qt_total{<<.LabelMatchers>>}[1m])
+    - seriesQuery: 'mysql_global_status_com_select{namespace!="",pod!=""}'
+      resources:
+        overrides:
+          namespace:
+            resource: namespace
+          pod:
+            resource: pod
+      name:
+        matches: "^mysql_global_status_com_select$"
+        as: "mysql_reads_per_second"
+      metricsQuery: |
+        rate(mysql_global_status_com_select{<<.LabelMatchers>>}[1m])
