@@ -13,8 +13,8 @@ spec:
       labels:
         type: frontend
     spec:
-      # nodeSelector: # Schedule only on nodes that have label frontend
-      #   type: frontend
+      nodeSelector: # Schedule only on nodes that have label frontend
+        type: frontend
       containers:
         - name: test-app
           image: ghcr.io/nodefitter/sampleapp:0.3.0
@@ -61,9 +61,9 @@ spec:
   namespaceSelector:
     matchNames:
       - frontend
-  selector: {}
-    # matchLabels:
-    #   type: frontend
+  selector:
+    matchLabels:
+      type: frontend
   endpoints:
     - port: metrics
       path: /metrics

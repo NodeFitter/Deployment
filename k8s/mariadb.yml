@@ -1,18 +1,3 @@
-# Persisten volume
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: mariadb-pv
-spec:
-  capacity:
-    storage: 1Gi
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Delete
-  storageClassName: manual
-  hostPath:
-    path: /tmp/k8s-mariadb
----
 # MariaDB service
 apiVersion: v1
 kind: Service
@@ -33,14 +18,13 @@ spec:
       targetPort: 9104
   type: ClusterIP
 ---
-# MariaDB StatefulSet
+# MariaDB Deployment
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: mariadb
+  name: mariadb-deployment-backend
   namespace: backend
 spec:
-  serviceName: mariadb
   replicas: 1
   selector:
     matchLabels:
@@ -80,8 +64,6 @@ spec:
                   name: mariadb-secret
                   key: MARIADB_ROOT_PASSWORD
           volumeMounts:
-            - name: data
-              mountPath: /var/lib/mysql
             - name: initdb
               mountPath: /docker-entrypoint-initdb.d
               readOnly: true
@@ -115,16 +97,6 @@ spec:
             items:
               - key: .config.cnf
                 path: .config.cnf
-  volumeClaimTemplates:
-    - metadata:
-        name: data
-      spec:
-        accessModes:
-          - ReadWriteOnce
-        storageClassName: manual
-        resources:
-          requests:
-            storage: 1Gi
 ---
 # TODO: adjust to recover MariaDB metrics
 apiVersion: autoscaling/v2
