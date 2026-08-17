@@ -107,8 +107,8 @@ metadata:
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
-    kind: StatefulSet
-    name: mariadb # Must match with deploy name
+    kind: Deployment
+    name: mariadb-deployment-backend # Must match with deploy name
   minReplicas: 1
   maxReplicas: 10
   behavior:
