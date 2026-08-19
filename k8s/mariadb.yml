@@ -131,7 +131,7 @@ spec:
           name: mysql_reads_per_second
         target:
           type: AverageValue
-          averageValue: "5"
+          averageValue: "3"
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

@@ -1,6 +1,13 @@
 # Deployment
 Repository containing files for the presentation of the project
 
+> [!NOTE]
+> If the various helm commands are run where the Kubernetes control plane is, installation may fail due to the control plane being tainted.
+> It is possible to un-taint the node by running
+> ```sh
+> kubectl taint nodes <node-name> node-role.kubernetes.io/control-plane:NoSchedule-
+> ```
+
 ## How to setup custom metrics for HPA
 - Install `Helm` with:
     ```sh
@@ -15,9 +22,24 @@ Repository containing files for the presentation of the project
     ```
 - Install the `kube-prometheus-stack` without unnecessary component and set the namespace to `monitoring`
     ```sh
-    helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace --set grafana.enabled=false --set alertmanager.enabled=false --set kubeStateMetrics.enabled=false --set nodeExporter.enabled=false --set prometheus-pushgateway.enabled=false --set defaultRules.create=false --set prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues=false --set prometheus.prometheusSpec.serviceMonitorSelector.matchLabels.monitoring=prometheus
+    helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace -f ./helmCharts/prometheusChart.yaml
     ```
 - Install the `prometheus-adapter`, necessary to make possible the retrieval of measurements by kubernetes:
     ```sh
-    helm install prometheus-adapter prometheus-community/prometheus-adapter --namespace monitoring --set prometheus.url=http://prometheus-kube-prometheus-prometheus.monitoring.svc --set prometheus.port=9090 -f ./k8s/prometheusConfig.yaml 
+    helm install prometheus-adapter prometheus-community/prometheus-adapter --namespace monitoring -f ./helmCharts/prometheusAdapterChart.yaml 
+    ```
+- Add a local path provisioner (in this example [rancher](https://github.com/rancher/local-path-provisioner) is used):
+    ```sh
+    kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+    ```
+- Install `loki` as the log collector
+    ```sh
+    helm repo add grafana-community https://grafana-community.github.io/helm-charts
+    helm repo update
+    helm install loki grafana-community/loki -f ./helmCharts/lokiChart.yaml -n monitoring
+    ```
+- Install `fluent-bit` as the log collector (daemonset)
+    ```sh
+        helm repo add fluent https://fluent.github.io/helm-charts
+        helm upgrade --install fluent-bit fluent/fluent-bit -n monitoring -f ./helmCharts/fluentBitChart.yaml
     ```

@@ -1,0 +1,147 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-persistentvolumeclaim
+  namespace: monitoring
+spec:
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-deployment
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      securityContext: # Gives Grafana permission to write the pv without being root (472 is the group of the grafana user)
+        fsGroup: 472
+        supplementalGroups:
+          - 0
+      containers:
+        - name: grafana
+          image: grafana/grafana:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http-grafana
+          volumeMounts:
+            - mountPath: /var/lib/grafana
+              name: grafana-persistentvolume
+      volumes:
+        - name: grafana-persistentvolume
+          persistentVolumeClaim:
+            claimName: grafana-persistentvolumeclaim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service
+  namespace: monitoring
+spec:
+  ports: 
+    - port: 3000
+      targetPort: http-grafana
+  selector:
+    app: grafana
+  type: LoadBalancer
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "monitoring-general-network-policy"
+  namespace: monitoring # Apply the network policy to namespace monitoring
+spec:
+  podSelector: {} # Apply to all pods in namespace monitoring
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+      - port: 3000 # Allow access to port 3000 (Grafana)
+      - port: 9090 # Allow access to port 9090 (Prometheus)
+      - port: 6443 # Allow access to port 6443 (Prometheus adapter)
+      - port: 443 # Allow access to port 443 (Prometheus adapter /healtz endpoint)
+      - port: 3100   # Allow access to port 3100 (Loki HTTP)
+    - from:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 7946 # Loki memberlist
+          protocol: TCP
+        - port: 7946
+          protocol: UDP
+  egress:
+    - to: # Allow communication to pods in frontend namespace with label type=frontend for monitoring, port 9090
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: frontend
+        podSelector:
+            matchLabels:
+              type: frontend
+      ports:
+        - port: 9090
+    - to: # Allow communication to pods in backend namespace with label type=backend for monitoring, port 9104
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: backend
+        podSelector:
+            matchLabels:
+              type: backend
+      ports:
+        - port: 9104
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 9090   # Grafana -> Prometheus
+        - port: 3100   # Grafana/Fluent Bit -> Loki
+        - port: 7946   # Loki memberlist TCP
+          protocol: TCP
+        - port: 7946   # Loki memberlist UDP
+          protocol: UDP
+    - to: # Allow DNS
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: kube-system
+        podSelector:
+          matchLabels:
+            k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: crd.projectcalico.org/v1 # Specific network policy for calico: allow every pod in monitoring to access the kubernetes service in default namespace. Usefoul to allow access to kubernetes.default.svc (kubernetes API), which is necessary for prometheus and other elements 
+kind: NetworkPolicy
+metadata:
+  name: monitoring-specific-network-policy
+  namespace: monitoring
+spec:
+  selector: all()
+  types:
+    - Egress
+  egress:
+    - action: Allow
+      protocol: TCP
+      destination:
+        services:
+          name: kubernetes
+          namespace: default
+  

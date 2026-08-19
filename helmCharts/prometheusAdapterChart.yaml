@@ -3,6 +3,10 @@
 prometheus:
   url: http://prometheus-operated.monitoring.svc
   port: 9090
+
+podLabels:
+  app: prometheus-adapter
+
 rules:
   default: false
   custom:
@@ -18,7 +22,7 @@ rules:
         as: "http_requests_per_second"
       metricsQuery: |
         rate(total_request_qt_total{<<.LabelMatchers>>}[1m])
-    - seriesQuery: 'mysql_global_status_commands_total{command="select",namespace!="",pod!=""}'
+    - seriesQuery: 'mysql_global_status_commands_total{command="update",namespace!="",pod!=""}'
       resources:
         overrides:
           namespace:
@@ -29,4 +33,4 @@ rules:
         matches: "^mysql_global_status_commands_total$"
         as: "mysql_reads_per_second"
       metricsQuery: |
-        rate(mysql_global_status_commands_total{command="select",<<.LabelMatchers>>}[1m])
+        rate(mysql_global_status_commands_total{command="update",<<.LabelMatchers>>}[1m])
