@@ -43,10 +43,6 @@ Repository containing files for the presentation of the project
 
 ## Setup logs collection
 
-- Add a dynamic local-path provisioner (in this example [rancher](https://github.com/rancher/local-path-provisioner) is used):
-    ```sh
-    kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
-    ```
 - Install `loki` to centralize logs:
     ```sh
     helm repo add grafana-community https://grafana-community.github.io/helm-charts
