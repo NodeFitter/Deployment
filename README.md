@@ -43,10 +43,14 @@ Repository containing files for the presentation of the project
 
 ## Setup logs collection
 
+- Add the [Grafana Community Helm Charts](https://grafana-community.github.io/helm-charts/):
+  ```sh
+  helm repo add grafana-community https://grafana-community.github.io/helm-charts
+    helm repo update
+  ```
+
 - Install `loki` to centralize logs:
     ```sh
-    helm repo add grafana-community https://grafana-community.github.io/helm-charts
-    helm repo update
     helm install loki grafana-community/loki -f ./helmCharts/lokiChart.yaml -n monitoring
     ```
 - Install `fluent-bit` (daemonset) to collect logs from the various nodes:
