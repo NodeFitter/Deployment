@@ -46,7 +46,7 @@ Repository containing files for the presentation of the project
 - Add the [Grafana Community Helm Charts](https://grafana-community.github.io/helm-charts/):
   ```sh
   helm repo add grafana-community https://grafana-community.github.io/helm-charts
-    helm repo update
+  helm repo update
   ```
 
 - Install `loki` to centralize logs:
@@ -55,6 +55,6 @@ Repository containing files for the presentation of the project
     ```
 - Install `fluent-bit` (daemonset) to collect logs from the various nodes:
     ```sh
-        helm repo add fluent https://fluent.github.io/helm-charts
-        helm upgrade --install fluent-bit fluent/fluent-bit -n monitoring -f ./helmCharts/fluentBitChart.yaml
+    helm repo add fluent https://fluent.github.io/helm-charts
+    helm upgrade --install fluent-bit fluent/fluent-bit -n monitoring -f ./helmCharts/fluentBitChart.yaml
     ```
