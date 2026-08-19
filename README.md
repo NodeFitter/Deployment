@@ -28,7 +28,7 @@ Repository containing files for the presentation of the project
     ```sh
     helm install prometheus-adapter prometheus-community/prometheus-adapter --namespace monitoring -f ./helmCharts/prometheusAdapterChart.yaml 
     ```
-- Add a local path provisioner (in this example [rancher](https://github.com/rancher/local-path-provisioner) is used):
+- Add a dynamic local-path provisioner (in this example [rancher](https://github.com/rancher/local-path-provisioner) is used):
     ```sh
     kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
     ```
