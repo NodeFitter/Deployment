@@ -10,10 +10,8 @@ hostNetwork: false
 
 nodeSelector: {}
 
-tolerations:
-  - operator: Exists
-
-labels: {}
+labels: 
+  - type: fluentbit
 
 ## https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/configuration-file
 config:
