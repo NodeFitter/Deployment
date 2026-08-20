@@ -13,7 +13,7 @@ Repository containing files for the presentation of the project
 > If the various Helm commands are run where the Kubernetes control plane is, installation may fail due to the control plane being tainted.
 > It is possible to un-taint the node by running
 > ```sh
-> kubectl taint nodes <node-name> node-role.kubernetes.io/control-plane:NoSchedule-
+> kubectl taint nodes <control-plane-node-name> node-role.kubernetes.io/control-plane:NoSchedule-
 > ```
 
 > [!NOTE]
@@ -53,7 +53,7 @@ Repository containing files for the presentation of the project
     ```sh
     helm install loki grafana-community/loki -f ./helmCharts/lokiChart.yaml -n monitoring
     ```
-- Add the [Fluent Helm Charts]("https://github.com/fluent/helm-charts") with:
+- Add the  [Fluent Helm Charts](https://github.com/fluent/helm-charts) with:
   ```sh
       helm repo add fluent https://fluent.github.io/helm-charts
       helm repo update
@@ -71,8 +71,8 @@ Once logged into Grafana (default username is `admin`, default password is `admi
 - `loki`: leave all default, insert `http://loki.monitoring:3100` as `Connection` address
 - `prometheus`: leave all default, insert `http://prometheus-kube-prometheus-prometheus.monitoring:9090` as `Connection` address
 
-A copy of the connection infrormazion can be found in the [grafana folder]("https://github.com/NodeFitter/Deployment/blob/main/grafana/dataSource.json") of this repository.
+A copy of the connection infrormation can be found in the [grafana folder](https://github.com/NodeFitter/Deployment/blob/main/grafana/dataSource.json) of this repository.
 
 ### Dashboard setup
 
-Once logged into Grafana (default username is `admin`, default password is `admin`), go to the `Dashboards` section in the side menu and import the dashboard available in the [grafana folder]("https://github.com/NodeFitter/Deployment/blob/main/grafana/dashboard.json") of this repository.
+Once logged into Grafana (default username is `admin`, default password is `admin`), go to the `Dashboards` section in the side menu and import the dashboard available in the [grafana folder](https://github.com/NodeFitter/Deployment/blob/main/grafana/dashboard.json) of this repository.
