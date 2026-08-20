@@ -53,8 +53,26 @@ Repository containing files for the presentation of the project
     ```sh
     helm install loki grafana-community/loki -f ./helmCharts/lokiChart.yaml -n monitoring
     ```
+- Add the [Fluent Helm Charts]("https://github.com/fluent/helm-charts") with:
+  ```sh
+      helm repo add fluent https://fluent.github.io/helm-charts
+      helm repo update
+  ```
 - Install `fluent-bit` (daemonset) to collect logs from the various nodes:
     ```sh
-    helm repo add fluent https://fluent.github.io/helm-charts
     helm upgrade --install fluent-bit fluent/fluent-bit -n monitoring -f ./helmCharts/fluentBitChart.yaml
     ```
+
+## Setup Grafana
+
+### Connection setup
+
+Once logged into Grafana (default username is `admin`, default password is `admin`), go to the `Connections` section in the side menu, then select `Data sources`. Add:
+- `loki`: leave all default, insert `http://loki.monitoring:3100` as `Connection` address
+- `prometheus`: leave all default, insert `http://prometheus-kube-prometheus-prometheus.monitoring:9090` as `Connection` address
+
+A copy of the connection infrormazion can be found in the [grafana folder]("https://github.com/NodeFitter/Deployment/blob/main/grafana/dataSource.json") of this repository.
+
+### Dashboard setup
+
+Once logged into Grafana (default username is `admin`, default password is `admin`), go to the `Dashboards` section in the side menu and import the dashboard available in the [grafana folder]("https://github.com/NodeFitter/Deployment/blob/main/grafana/dashboard.json") of this repository.
