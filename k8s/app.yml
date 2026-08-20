@@ -17,7 +17,7 @@ spec:
         type: frontend
       containers:
         - name: test-app
-          image: ghcr.io/nodefitter/sampleapp:0.3.0
+          image: ghcr.io/nodefitter/sampleapp:0.4.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

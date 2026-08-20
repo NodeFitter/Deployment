@@ -47,6 +47,43 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%d\n", number)
 }
 
+func pingHandle(w http.ResponseWriter, _ *http.Request) {
+	// Metrics
+	if err := meter.Increment(); err != nil {
+		log.Printf("failed to increment request counter: %v", err)
+		fmt.Fprintf(w, "pong (FAILURE - no counter incremented)")
+		return
+	}
+
+	fmt.Fprintf(w, "pong (SUCCESS)")
+}
+
+func dbBypassCounter(w http.ResponseWriter, _ *http.Request) {
+	var number int
+
+	// Get the current number.
+	err := db.QueryRow("SELECT number FROM random_number WHERE id = 1").Scan(&number)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Generate the next random number.
+	newNumber := rand.Intn(1000000)
+
+	// Store it.
+	_, err = db.Exec(
+		"UPDATE random_number SET number = ? WHERE id = 1",
+		newNumber,
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "%d\n", number)
+}
+
 func main() {
 	dsn := os.Getenv("DB_DSN")
 	if dsn == "" {
@@ -74,6 +111,8 @@ func main() {
 	}
 
 	muxWork.HandleFunc("/", handler)
+	muxWork.HandleFunc("/ping", pingHandle)
+	muxWork.HandleFunc("/bypassCounter", dbBypassCounter)
 
 	go func() {
 		log.Println("listening on :8080")
