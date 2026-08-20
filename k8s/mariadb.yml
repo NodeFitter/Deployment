@@ -128,7 +128,7 @@ spec:
     - type: Pods
       pods:
         metric:
-          name: mysql_reads_per_second
+          name: mysql_updates_per_second
         target:
           type: AverageValue
           averageValue: "3"
@@ -159,8 +159,11 @@ spec:
       - namespaceSelector:
           matchLabels:
             kubernetes.io/metadata.name: monitoring
+        podSelector:
+            matchLabels:
+              app: prometheus
       ports:
-        - port: 9104 # TODO: adjust network policy to allow prometheus metrics retrieval
+        - port: 9104
     - from: # Allow connection from other pods in backend namespace with label type=backend
       - namespaceSelector:
           matchLabels:

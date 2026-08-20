@@ -17,6 +17,8 @@ var db *sql.DB
 var meter abstract.Imeter
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Received normal request")
+
 	// Metrics
 	if err := meter.Increment(); err != nil {
 		log.Printf("failed to increment request counter: %v", err)
@@ -44,10 +46,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("Returning magic number: ", number)
+
 	fmt.Fprintf(w, "%d\n", number)
 }
 
 func pingHandle(w http.ResponseWriter, _ *http.Request) {
+	log.Println("Received ping request")
+
 	// Metrics
 	if err := meter.Increment(); err != nil {
 		log.Printf("failed to increment request counter: %v", err)
@@ -59,6 +65,8 @@ func pingHandle(w http.ResponseWriter, _ *http.Request) {
 }
 
 func dbBypassCounter(w http.ResponseWriter, _ *http.Request) {
+	log.Println("Received bypass request")
+
 	var number int
 
 	// Get the current number.
@@ -80,6 +88,8 @@ func dbBypassCounter(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	log.Println("Returning magic number: ", number)
 
 	fmt.Fprintf(w, "%d\n", number)
 }
@@ -111,7 +121,7 @@ func main() {
 	}
 
 	muxWork.HandleFunc("/", handler)
-	muxWork.HandleFunc("/ping", pingHandle)
+	muxWork.HandleFunc("/pingo", pingHandle)
 	muxWork.HandleFunc("/bypassCounter", dbBypassCounter)
 
 	go func() {

@@ -62,29 +62,69 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: "monitoring-general-network-policy"
-  namespace: monitoring # Apply the network policy to namespace monitoring
+  name: "monitoring-grafana-network-policy"
+  namespace: monitoring # Apply the network policy on namespace monitoring
 spec:
-  podSelector: {} # Apply to all pods in namespace monitoring
+  podSelector:
+    matchLabels:
+      app: grafana # Apply the network policy to pods having label app=grafana (and, because of namespace metadata, in namespace monitoring)
   policyTypes:
     - Ingress
     - Egress
   ingress:
     - ports:
-      - port: 3000 # Allow access to port 3000 (Grafana)
-      - port: 9090 # Allow access to port 9090 (Prometheus)
-      - port: 6443 # Allow access to port 6443 (Prometheus adapter)
-      - port: 443 # Allow access to port 443 (Prometheus adapter /healtz endpoint)
-      - port: 3100   # Allow access to port 3100 (Loki HTTP)
-    - from:
+        - port: 3000 # Allow access to port 3000 (Grafana) from every source (necessary to see Grafana UI)
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app: prometheus
+      ports:
+        - port: 9090   # Grafana -> Prometheus
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+          podSelector:
+            matchLabels:
+              app: loki
+      ports:
+        - port: 3100   # Grafana -> Loki
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "monitoring-prometheus-network-policy"
+  namespace: monitoring # Apply the network policy on namespace monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: prometheus # Apply the network policy to pods having label app=prometheus (and, because of namespace metadata, in namespace monitoring)
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from: # Allow access to Prometheus from the monitoring namespace, specifically from Grafana
       - namespaceSelector:
           matchLabels:
             kubernetes.io/metadata.name: monitoring
+        podSelector:
+            matchLabels:
+              app: grafana
       ports:
-        - port: 7946 # Loki memberlist
-          protocol: TCP
-        - port: 7946
-          protocol: UDP
+        - port: 9090 # Allow access to port 9090 (Prometheus)
+    - from: # Allow access to Prometheus from the monitoring namespace, specifically from prometheus-adapter
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+        podSelector:
+            matchLabels:
+              app: prometheus-adapter
+      ports:
+        - port: 9090 # Allow access to port 9090 (Prometheus)
   egress:
     - to: # Allow communication to pods in frontend namespace with label type=frontend for monitoring, port 9090
       - namespaceSelector:
@@ -104,17 +144,110 @@ spec:
               type: backend
       ports:
         - port: 9104
-    - to:
-        - namespaceSelector:
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "monitoring-loki-network-policy"
+  namespace: monitoring # Apply the network policy on namespace monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: loki # Apply the network policy to pods having label app=loki (and, because of namespace metadata, in namespace monitoring)
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from: # Allow access to loki from the monitoring namespace, specifically from Grafana
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+        podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: monitoring
+              app.kubernetes.io/name: fluent-bit
       ports:
-        - port: 9090   # Grafana -> Prometheus
-        - port: 3100   # Grafana/Fluent Bit -> Loki
-        - port: 7946   # Loki memberlist TCP
-          protocol: TCP
-        - port: 7946   # Loki memberlist UDP
-          protocol: UDP
+        - port: 3100
+    - from: # Allow access to loki from the monitoring namespace, specifically from Grafana
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+        podSelector:
+            matchLabels:
+              app: grafana
+      ports:
+        - port: 3100
+    - from: # Allow access to loki from the monitoring namespace, specifically from loki-canary
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+        podSelector:
+            matchLabels:
+              app: loki-canary
+      ports:
+        - port: 3100
+  egress: []
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "monitoring-loki-canary-network-policy"
+  namespace: monitoring # Apply the network policy on namespace monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: loki-canary # Apply the network policy to pods having label app=loki-canary (and, because of namespace metadata, in namespace monitoring)
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress:
+    - to: # Allow loki-canary to send data to loki (loki-canary is a daemonset)
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+        podSelector:
+            matchLabels:
+              app: loki
+      ports:
+        - port: 3100
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "monitoring-prometheus-adapter-network-policy"
+  namespace: monitoring # Apply the network policy on namespace monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app: prometheus-adapter # Apply the network policy to pods having label app=prometheus-adapter (and, because of namespace metadata, in namespace monitoring)
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+      - port: 6443 # Allow access to port 6443 (Prometheus adapter) from every source (necessary to make HPA work)
+      - port: 443 # Allow access to port 443 (Prometheus adapter /healtz endpoint) (necessary to make HPA work)
+  egress:
+    - to: # Allow access to Prometheus, port 9090
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+        podSelector:
+            matchLabels:
+              app: prometheus
+      ports:
+        - port: 9090
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "monitoring-allow-dns-network-policy"
+  namespace: monitoring # Apply the network policy to namespace monitoring
+spec:
+  podSelector: {} # Apply to all pods in namespace monitoring
+  policyTypes:
+    - Egress
+  egress:
     - to: # Allow DNS
       - namespaceSelector:
           matchLabels:
@@ -128,7 +261,29 @@ spec:
         - protocol: TCP
           port: 53
 ---
-apiVersion: crd.projectcalico.org/v1 # Specific network policy for calico: allow every pod in monitoring to access the kubernetes service in default namespace. Usefoul to allow access to kubernetes.default.svc (kubernetes API), which is necessary for prometheus and other elements 
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "monitoring-fluent-bit-network-policy"
+  namespace: monitoring
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: fluent-bit
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: monitoring
+        podSelector:
+          matchLabels:
+            app: loki
+      ports:
+        - port: 3100
+---
+apiVersion: crd.projectcalico.org/v1 # Specific network policy for calico: allow every pod in monitoring to access the kubernetes service in default namespace. Useful to allow access to kubernetes.default.svc (kubernetes API), which is necessary for prometheus and other elements 
 kind: NetworkPolicy
 metadata:
   name: monitoring-specific-network-policy

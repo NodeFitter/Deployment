@@ -29,8 +29,14 @@ loki:
 
 deploymentMode: Monolithic # Old SingleBinary, renamed on version 12.0 of the chart (all component in a single container)
 
+lokiCanary:
+  podLabels:
+    app: loki-canary
+
 singleBinary:
   replicas: 1
+  podLabels:
+    app: loki
   nodeSelector:
     node-role.kubernetes.io/control-plane: ""
   persistence:

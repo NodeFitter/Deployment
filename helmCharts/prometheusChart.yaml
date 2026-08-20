@@ -18,6 +18,9 @@ defaultRules:
 
 prometheus:
   prometheusSpec:
+    podMetadata:
+      labels:
+        app: prometheus
     serviceMonitorSelectorNilUsesHelmValues: false
     serviceMonitorSelector:
       matchLabels:

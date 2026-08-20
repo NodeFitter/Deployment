@@ -17,7 +17,7 @@ spec:
         type: frontend
       containers:
         - name: test-app
-          image: ghcr.io/nodefitter/sampleapp:0.4.0
+          image: ghcr.io/nodefitter/sampleapp:0.5.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -122,6 +122,9 @@ spec:
       - namespaceSelector:
           matchLabels:
             kubernetes.io/metadata.name: monitoring
+        podSelector:
+            matchLabels:
+              app: prometheus
       ports:
         - port: 9090
   egress:

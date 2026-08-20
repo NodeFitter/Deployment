@@ -10,9 +10,6 @@ hostNetwork: false
 
 nodeSelector: {}
 
-labels: 
-  - type: fluentbit
-
 ## https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode/configuration-file
 config:
   service: |
