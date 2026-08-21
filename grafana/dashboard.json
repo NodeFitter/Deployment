@@ -3,7 +3,7 @@
   "kind": "Dashboard",
   "metadata": {
     "name": "adtrdpp",
-    "generation": 16,
+    "generation": 17,
     "creationTimestamp": "2026-08-19T14:07:22Z",
     "labels": {},
     "annotations": {}
@@ -459,8 +459,8 @@
     "tags": [],
     "timeSettings": {
       "timezone": "browser",
-      "from": "2026-08-20T01:06:47.981Z",
-      "to": "2026-08-21T01:06:47.981Z",
+      "from": "now-1h",
+      "to": "now",
       "autoRefresh": "auto",
       "autoRefreshIntervals": [
         "5s",

@@ -55,8 +55,8 @@ Repository containing files for the presentation of the project
     ```
 - Add the  [Fluent Helm Charts](https://github.com/fluent/helm-charts) with:
   ```sh
-      helm repo add fluent https://fluent.github.io/helm-charts
-      helm repo update
+    helm repo add fluent https://fluent.github.io/helm-charts
+    helm repo update
   ```
 - Install `fluent-bit` (daemonset) to collect logs from the various nodes:
     ```sh
